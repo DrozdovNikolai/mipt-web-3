@@ -29,12 +29,13 @@ export function CheckoutPage() {
   const orderStatus = useAppSelector((state) => state.orders.status);
   const orderError = useAppSelector((state) => state.orders.error);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
+  const hasMissingProducts = items.some((item) => !productsById[item.productId]);
 
   useEffect(() => {
-    if (items.length > 0) {
+    if (items.length > 0 && hasMissingProducts) {
       dispatch(loadProducts({ pageSize: 100 }));
     }
-  }, [dispatch, items.length]);
+  }, [dispatch, items.length, hasMissingProducts]);
 
   const rows = useMemo(
     () =>

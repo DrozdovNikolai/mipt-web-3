@@ -12,12 +12,13 @@ export function CartPage() {
   const dispatch = useAppDispatch();
   const items = useAppSelector((state) => state.cart.items);
   const productsById = useAppSelector((state) => state.products.byId);
+  const hasMissingProducts = items.some((item) => !productsById[item.productId]);
 
   useEffect(() => {
-    if (items.length > 0) {
+    if (items.length > 0 && hasMissingProducts) {
       dispatch(loadProducts({ pageSize: 100 }));
     }
-  }, [dispatch, items.length]);
+  }, [dispatch, items.length, hasMissingProducts]);
 
   const rows = items
     .map((item) => {

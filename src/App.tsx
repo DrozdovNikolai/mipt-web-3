@@ -8,7 +8,7 @@ import { CheckoutPage } from "./pages/CheckoutPage";
 import { ProductPage } from "./pages/ProductPage";
 import { SuccessPage } from "./pages/SuccessPage";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
-import { loadCategories, loadProducts } from "./store/productsSlice";
+import { loadCategories } from "./store/productsSlice";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -18,7 +18,6 @@ export default function App() {
 
   useEffect(() => {
     dispatch(loadCategories());
-    dispatch(loadProducts({ pageSize: 100 }));
   }, [dispatch]);
 
   return (
