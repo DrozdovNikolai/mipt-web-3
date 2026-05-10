@@ -52,7 +52,7 @@ export function CartPage() {
         </div>
       </div>
 
-      <div className={cx("checkout-layout")}>
+      <div className={cx("cart-layout")}>
         <section className={cx("panel", "cart-panel")}>
           <div className={cx("cart-table")} role="table" aria-label="Состав корзины">
             <div className={cx("cart-table-head")} role="row">
