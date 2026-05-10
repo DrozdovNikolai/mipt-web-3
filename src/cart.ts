@@ -1,4 +1,4 @@
-import type { CartItem, OrderSnapshot } from "./types";
+import type { CartItem, Order } from "./types";
 
 export const CART_STORAGE_KEY = "lampfactory.cart";
 export const LAST_ORDER_STORAGE_KEY = "lampfactory.lastOrder";
@@ -25,14 +25,14 @@ export function saveCart(items: CartItem[]) {
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
 }
 
-export function saveLastOrder(order: OrderSnapshot) {
+export function saveLastOrder(order: Order) {
   localStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(order));
 }
 
-export function loadLastOrder(): OrderSnapshot | null {
+export function loadLastOrder(): Order | null {
   try {
     const raw = localStorage.getItem(LAST_ORDER_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as OrderSnapshot) : null;
+    return raw ? (JSON.parse(raw) as Order) : null;
   } catch {
     return null;
   }
@@ -44,20 +44,5 @@ export function formatMoney(value: number) {
     currency: "RUB",
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-export function createOrderNumber() {
-  const date = new Date();
-  const datePart = new Intl.DateTimeFormat("ru-RU", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-    .format(date)
-    .split(".")
-    .reverse()
-    .join("");
-  const suffix = String(Math.floor(Math.random() * 9000) + 1000);
-  return `LF-${datePart}-${suffix}`;
 }
 

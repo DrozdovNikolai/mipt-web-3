@@ -1,6 +1,8 @@
 import { NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { cx } from "../styles";
+
 type LayoutProps = {
   children: ReactNode;
   cartCount: number;
@@ -8,25 +10,24 @@ type LayoutProps = {
 
 export function Layout({ children, cartCount }: LayoutProps) {
   return (
-    <div className="app-shell">
-      <div className="frame">
-        <header className="topbar">
-          <NavLink className="brand" to="/catalog" aria-label="LampFactory Store">
-            <span className="brand-mark" aria-hidden="true" />
+    <div className={cx("app-shell")}>
+      <div className={cx("frame")}>
+        <header className={cx("topbar")}>
+          <NavLink className={cx("brand")} to="/catalog" aria-label="LampFactory Store">
+            <span className={cx("brand-mark")} aria-hidden="true" />
             <span>LampFactory Store</span>
           </NavLink>
-          <nav className="nav-row" aria-label="Основная навигация">
-            <NavLink className="pill" to="/catalog">
+          <nav className={cx("nav-row")} aria-label="Основная навигация">
+            <NavLink className={({ isActive }) => cx("pill", isActive && "active")} to="/catalog">
               Каталог
             </NavLink>
-            <NavLink className="icon-pill" to="/cart">
+            <NavLink className={({ isActive }) => cx("icon-pill", isActive && "active")} to="/cart">
               Корзина <strong>{cartCount}</strong>
             </NavLink>
           </nav>
         </header>
-        <main className="content">{children}</main>
+        <main className={cx("content")}>{children}</main>
       </div>
     </div>
   );
 }
-

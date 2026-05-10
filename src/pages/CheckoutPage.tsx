@@ -1,14 +1,13 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
-import { createOrderNumber, DELIVERY_PRICE, formatMoney, saveLastOrder } from "../cart";
-import { getProductById } from "../data/catalog";
-import type { CartItem, CheckoutForm } from "../types";
-
-type CheckoutPageProps = {
-  items: CartItem[];
-  onClearCart: () => void;
-};
+import { DELIVERY_PRICE, formatMoney } from "../cart";
+import { cx } from "../styles";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { clearCart } from "../store/cartSlice";
+import { createOrder } from "../store/ordersSlice";
+import { loadProducts } from "../store/productsSlice";
+import type { CheckoutForm } from "../types";
 
 const initialForm: CheckoutForm = {
   customerName: "Иван Петров",
@@ -22,23 +21,38 @@ const initialForm: CheckoutForm = {
   personalDataAccepted: true,
 };
 
-export function CheckoutPage({ items, onClearCart }: CheckoutPageProps) {
+export function CheckoutPage() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((state) => state.cart.items);
+  const productsById = useAppSelector((state) => state.products.byId);
+  const orderStatus = useAppSelector((state) => state.orders.status);
+  const orderError = useAppSelector((state) => state.orders.error);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      dispatch(loadProducts({ pageSize: 100 }));
+    }
+  }, [dispatch, items.length]);
 
   const rows = useMemo(
     () =>
       items
         .map((item) => {
-          const product = getProductById(item.productId);
+          const product = productsById[item.productId];
           return product ? { product, quantity: item.quantity, lineTotal: product.price * item.quantity } : null;
         })
         .filter((row): row is NonNullable<typeof row> => Boolean(row)),
-    [items],
+    [items, productsById],
   );
 
-  if (rows.length === 0) {
+  if (items.length === 0) {
     return <Navigate to="/cart" replace />;
+  }
+
+  if (rows.length === 0) {
+    return <div className={cx("panel", "empty-state")}>Загрузка состава заказа...</div>;
   }
 
   const subtotal = rows.reduce((sum, row) => sum + row.lineTotal, 0);
@@ -49,79 +63,73 @@ export function CheckoutPage({ items, onClearCart }: CheckoutPageProps) {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const submitOrder = (event: FormEvent<HTMLFormElement>) => {
+  const submitOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!form.personalDataAccepted) return;
 
-    const orderNumber = createOrderNumber();
-    saveLastOrder({
-      orderNumber,
-      createdAt: new Date().toISOString(),
-      form,
-      items: rows,
-      subtotal,
-      delivery,
-      total,
-      status: "new",
-    });
-    onClearCart();
-    navigate(`/checkout/success/${orderNumber}`);
+    try {
+      const order = await dispatch(createOrder({ form, items })).unwrap();
+      dispatch(clearCart());
+      navigate(`/checkout/success/${order.orderNumber}`);
+    } catch {
+      // The rejected thunk stores a user-facing error in the orders slice.
+    }
   };
 
   return (
     <>
-      <div className="page-title">
+      <div className={cx("page-title")}>
         <div>
           <h1>Оформление заказа</h1>
-          <p className="muted">Контакты, доставка, оплата и состав заказа</p>
+          <p className={cx("muted")}>Контакты, доставка, оплата и состав заказа</p>
         </div>
-        <span className="tag">Шаг 2 из 2</span>
+        <span className={cx("tag")}>Шаг 2 из 2</span>
       </div>
 
-      <form className="checkout-layout" onSubmit={submitOrder}>
-        <section className="panel">
-          <div className="form-grid">
-            <label className="field">
+      <form className={cx("checkout-layout")} onSubmit={submitOrder}>
+        <section className={cx("panel")}>
+          <div className={cx("form-grid")}>
+            <label className={cx("field")}>
               <span>Имя</span>
               <input
-                className="input"
+                className={cx("input")}
                 required
                 value={form.customerName}
                 onChange={(event) => updateField("customerName", event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className={cx("field")}>
               <span>Телефон</span>
               <input
-                className="input"
+                className={cx("input")}
                 required
                 value={form.customerPhone}
                 onChange={(event) => updateField("customerPhone", event.target.value)}
               />
             </label>
-            <label className="field full">
+            <label className={cx("field", "full")}>
               <span>Email</span>
               <input
-                className="input"
+                className={cx("input")}
                 required
                 type="email"
                 value={form.customerEmail}
                 onChange={(event) => updateField("customerEmail", event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className={cx("field")}>
               <span>Город</span>
               <input
-                className="input"
+                className={cx("input")}
                 required
                 value={form.deliveryCity}
                 onChange={(event) => updateField("deliveryCity", event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className={cx("field")}>
               <span>Способ доставки</span>
               <select
-                className="select"
+                className={cx("select")}
                 value={form.deliveryMethod}
                 onChange={(event) =>
                   updateField("deliveryMethod", event.target.value as CheckoutForm["deliveryMethod"])
@@ -131,19 +139,19 @@ export function CheckoutPage({ items, onClearCart }: CheckoutPageProps) {
                 <option value="pickup">Самовывоз</option>
               </select>
             </label>
-            <label className="field full">
+            <label className={cx("field", "full")}>
               <span>Адрес доставки</span>
               <input
-                className="input"
+                className={cx("input")}
                 required
                 value={form.deliveryAddress}
                 onChange={(event) => updateField("deliveryAddress", event.target.value)}
               />
             </label>
-            <label className="field">
+            <label className={cx("field")}>
               <span>Способ оплаты</span>
               <select
-                className="select"
+                className={cx("select")}
                 value={form.paymentMethod}
                 onChange={(event) =>
                   updateField("paymentMethod", event.target.value as CheckoutForm["paymentMethod"])
@@ -153,9 +161,9 @@ export function CheckoutPage({ items, onClearCart }: CheckoutPageProps) {
                 <option value="cash_on_delivery">Наличными при получении</option>
               </select>
             </label>
-            <label className="field checkbox-field">
+            <label className={cx("field", "checkbox-field")}>
               <span>Согласие</span>
-              <span className="checkbox-row input-like">
+              <span className={cx("checkbox-row", "input-like")}>
                 <input
                   type="checkbox"
                   checked={form.personalDataAccepted}
@@ -164,10 +172,10 @@ export function CheckoutPage({ items, onClearCart }: CheckoutPageProps) {
                 <span>Согласен на обработку данных</span>
               </span>
             </label>
-            <label className="field full">
+            <label className={cx("field", "full")}>
               <span>Комментарий</span>
               <textarea
-                className="textarea"
+                className={cx("textarea")}
                 value={form.customerComment}
                 onChange={(event) => updateField("customerComment", event.target.value)}
               />
@@ -175,40 +183,44 @@ export function CheckoutPage({ items, onClearCart }: CheckoutPageProps) {
           </div>
         </section>
 
-        <aside className="panel summary-panel">
+        <aside className={cx("panel", "summary-panel")}>
           <h3>Ваш заказ</h3>
           {rows.map(({ product, quantity, lineTotal }) => (
-            <div className="cart-row" key={product.id}>
-              <span className="muted">
+            <div className={cx("cart-row")} key={product.id}>
+              <span className={cx("muted")}>
                 {product.name} x{quantity}
               </span>
               <strong>{formatMoney(lineTotal)}</strong>
             </div>
           ))}
           <hr />
-          <div className="summary-row">
-            <span className="muted">Товары</span>
+          <div className={cx("summary-row")}>
+            <span className={cx("muted")}>Товары</span>
             <strong>{formatMoney(subtotal)}</strong>
           </div>
-          <div className="summary-row">
-            <span className="muted">Доставка</span>
+          <div className={cx("summary-row")}>
+            <span className={cx("muted")}>Доставка</span>
             <strong>{formatMoney(delivery)}</strong>
           </div>
-          <div className="summary-row total-row">
+          <div className={cx("summary-row", "total-row")}>
             <span>Итого</span>
             <strong>{formatMoney(total)}</strong>
           </div>
-          <div className="actions-inline">
-            <button className="btn" type="submit" disabled={!form.personalDataAccepted}>
-              Подтвердить заказ
+          <div className={cx("actions-inline")}>
+            <button
+              className={cx("btn")}
+              type="submit"
+              disabled={!form.personalDataAccepted || orderStatus === "loading"}
+            >
+              {orderStatus === "loading" ? "Создаем заказ..." : "Подтвердить заказ"}
             </button>
-            <Link className="btn-ghost" to="/cart">
+            <Link className={cx("btn-ghost")} to="/cart">
               Вернуться в корзину
             </Link>
           </div>
+          {orderError ? <p className={cx("status", "danger")}>{orderError}</p> : null}
         </aside>
       </form>
     </>
   );
 }
-

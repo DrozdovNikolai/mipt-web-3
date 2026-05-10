@@ -1,3 +1,5 @@
+import { cx } from "../styles";
+
 type QuantityControlProps = {
   value: number;
   max?: number;
@@ -6,7 +8,7 @@ type QuantityControlProps = {
 
 export function QuantityControl({ value, max = 99, onChange }: QuantityControlProps) {
   return (
-    <div className="qty-control" aria-label="Количество">
+    <div className={cx("qty-control")} aria-label="Количество">
       <button type="button" onClick={() => onChange(Math.max(1, value - 1))} aria-label="Уменьшить">
         -
       </button>
@@ -17,4 +19,3 @@ export function QuantityControl({ value, max = 99, onChange }: QuantityControlPr
     </div>
   );
 }
-

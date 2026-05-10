@@ -1,16 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ProductCard } from "../components/ProductCard";
-import { categories, products, sockets, temperatures } from "../data/catalog";
+import { cx } from "../styles";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { addToCart } from "../store/cartSlice";
+import { loadProducts } from "../store/productsSlice";
 import type { Product } from "../types";
-
-type CatalogPageProps = {
-  onAddToCart: (product: Product) => void;
-};
 
 type SortValue = "price_asc" | "price_desc" | "name_asc" | "name_desc";
 
-export function CatalogPage({ onAddToCart }: CatalogPageProps) {
+export function CatalogPage() {
+  const dispatch = useAppDispatch();
+  const { items, byId, categories, total, status, error } = useAppSelector((state) => state.products);
   const [category, setCategory] = useState("all");
   const [socket, setSocket] = useState("all");
   const [temperature, setTemperature] = useState("all");
@@ -18,41 +19,67 @@ export function CatalogPage({ onAddToCart }: CatalogPageProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortValue>("price_asc");
 
-  const filteredProducts = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    const result = products.filter((product) => {
-      const matchesCategory = category === "all" || product.categorySlug === category;
-      const matchesSocket = socket === "all" || product.socketType === socket;
-      const matchesTemperature = temperature === "all" || product.colorTemperature === temperature;
-      const matchesStock = !inStockOnly || product.stockQty > 0;
-      const matchesSearch =
-        !normalizedSearch ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.sku.toLowerCase().includes(normalizedSearch);
+  const allKnownProducts = useMemo(() => Object.values(byId), [byId]);
+  const sockets = useMemo(
+    () => Array.from(new Set(allKnownProducts.map((product) => product.socketType))).sort(),
+    [allKnownProducts],
+  );
+  const temperatures = useMemo(
+    () => Array.from(new Set(allKnownProducts.map((product) => product.colorTemperature))).sort(),
+    [allKnownProducts],
+  );
 
-      return matchesCategory && matchesSocket && matchesTemperature && matchesStock && matchesSearch;
-    });
+  useEffect(() => {
+    dispatch(
+      loadProducts({
+        category: category === "all" ? undefined : category,
+        socket: socket === "all" ? undefined : socket,
+        colorTemperature: temperature === "all" ? undefined : temperature,
+        inStock: inStockOnly ? true : undefined,
+        search: search.trim() || undefined,
+        sort,
+        page: 1,
+        pageSize: 100,
+      }),
+    );
+  }, [category, socket, temperature, inStockOnly, search, sort, dispatch]);
 
-    return result.sort((a, b) => {
-      if (sort === "price_asc") return a.price - b.price;
-      if (sort === "price_desc") return b.price - a.price;
-      if (sort === "name_desc") return b.name.localeCompare(a.name, "ru");
-      return a.name.localeCompare(b.name, "ru");
+  const handleAddToCart = (product: Product) => {
+    dispatch(addToCart({ productId: product.id, stockQty: product.stockQty }));
+  };
+
+  const productsCount = status === "succeeded" ? total : items.length;
+
+  const content = useMemo(() => {
+    if (status === "loading") {
+      return <div className={cx("panel", "empty-state")}>Загрузка каталога...</div>;
+    }
+
+    if (status === "failed") {
+      return <div className={cx("panel", "empty-state")}>{error ?? "Не удалось загрузить каталог"}</div>;
+    }
+
+    if (items.length === 0) {
+      return <div className={cx("panel", "empty-state")}>Товары не найдены.</div>;
+    }
+
+    return items.map((product) => {
+      return <ProductCard key={product.id} product={product} onAdd={handleAddToCart} />;
     });
-  }, [category, socket, temperature, inStockOnly, search, sort]);
+  }, [items, status, error, handleAddToCart]);
 
   return (
     <>
-      <div className="page-title">
+      <div className={cx("page-title")}>
         <div>
           <h1>Каталог лампочек</h1>
-          <p className="muted">20 позиций завода LampFactory</p>
+          <p className={cx("muted")}>20 позиций завода LampFactory</p>
         </div>
-        <div className="actions-inline">
-          <span className="tag">Найдено: {filteredProducts.length}</span>
-          <label className="field compact-field">
+        <div className={cx("actions-inline")}>
+          <span className={cx("tag")}>Найдено: {productsCount}</span>
+          <label className={cx("field", "compact-field")}>
             <span>Сортировка</span>
-            <select className="select" value={sort} onChange={(event) => setSort(event.target.value as SortValue)}>
+            <select className={cx("select")} value={sort} onChange={(event) => setSort(event.target.value as SortValue)}>
               <option value="price_asc">Сначала дешевле</option>
               <option value="price_desc">Сначала дороже</option>
               <option value="name_asc">Название А-Я</option>
@@ -62,22 +89,22 @@ export function CatalogPage({ onAddToCart }: CatalogPageProps) {
         </div>
       </div>
 
-      <div className="layout catalog-layout">
-        <aside className="panel filters-panel">
+      <div className={cx("layout", "catalog-layout")}>
+        <aside className={cx("panel", "filters-panel")}>
           <h3>Фильтры</h3>
-          <label className="field">
+          <label className={cx("field")}>
             <span>Поиск</span>
             <input
-              className="input"
+              className={cx("input")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="SKU или название"
             />
           </label>
 
-          <label className="field">
+          <label className={cx("field")}>
             <span>Категория</span>
-            <select className="select" value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select className={cx("select")} value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="all">Все категории</option>
               {categories.map((item) => (
                 <option key={item.slug} value={item.slug}>
@@ -87,9 +114,9 @@ export function CatalogPage({ onAddToCart }: CatalogPageProps) {
             </select>
           </label>
 
-          <label className="field">
+          <label className={cx("field")}>
             <span>Цоколь</span>
-            <select className="select" value={socket} onChange={(event) => setSocket(event.target.value)}>
+            <select className={cx("select")} value={socket} onChange={(event) => setSocket(event.target.value)}>
               <option value="all">Любой</option>
               {sockets.map((item) => (
                 <option key={item} value={item}>
@@ -99,10 +126,10 @@ export function CatalogPage({ onAddToCart }: CatalogPageProps) {
             </select>
           </label>
 
-          <label className="field">
+          <label className={cx("field")}>
             <span>Температура</span>
             <select
-              className="select"
+              className={cx("select")}
               value={temperature}
               onChange={(event) => setTemperature(event.target.value)}
             >
@@ -115,7 +142,7 @@ export function CatalogPage({ onAddToCart }: CatalogPageProps) {
             </select>
           </label>
 
-          <label className="checkbox-row">
+          <label className={cx("checkbox-row")}>
             <input
               type="checkbox"
               checked={inStockOnly}
@@ -125,13 +152,10 @@ export function CatalogPage({ onAddToCart }: CatalogPageProps) {
           </label>
         </aside>
 
-        <section className="products-grid" aria-label="Товары">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} onAdd={onAddToCart} />
-          ))}
+        <section className={cx("products-grid")} aria-label="Товары">
+          {content}
         </section>
       </div>
     </>
   );
 }
-

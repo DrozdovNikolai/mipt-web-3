@@ -62,6 +62,7 @@ export const products: Product[] = (seed as SeedProduct[]).map((item) => {
 
   return {
     id: item.slug,
+    categoryId: categorySlugs[item.category] ?? item.category,
     sku: item.sku,
     slug: item.slug,
     name: item.name,
@@ -97,4 +98,3 @@ export function getProductBySlug(slug: string | undefined) {
 export function getProductById(id: string) {
   return products.find((product) => product.id === id);
 }
-

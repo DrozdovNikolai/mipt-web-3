@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 
 import { formatMoney, loadLastOrder } from "../cart";
+import { cx } from "../styles";
 
 export function SuccessPage() {
   const { orderNumber } = useParams();
@@ -9,10 +10,10 @@ export function SuccessPage() {
 
   if (!order || !isCurrentOrder) {
     return (
-      <div className="panel empty-state">
+      <div className={cx("panel", "empty-state")}>
         <h1>Заказ {orderNumber}</h1>
-        <p className="muted">Данные подтверждения не найдены в этом браузере.</p>
-        <Link className="btn" to="/catalog">
+        <p className={cx("muted")}>Данные подтверждения не найдены в этом браузере.</p>
+        <Link className={cx("btn")} to="/catalog">
           Вернуться в каталог
         </Link>
       </div>
@@ -21,69 +22,68 @@ export function SuccessPage() {
 
   return (
     <>
-      <section className="success-banner">
-        <span className="status success">Заказ успешно создан</span>
+      <section className={cx("success-banner")}>
+        <span className={cx("status", "success")}>Заказ успешно создан</span>
         <h1>Заказ {order.orderNumber}</h1>
-        <p className="muted">
-          Статус: <strong>{order.status}</strong>. Менеджер свяжется с клиентом для подтверждения деталей доставки.
+        <p className={cx("muted")}>
+          Статус: <strong>{order.orderStatus}</strong>. Менеджер свяжется с клиентом для подтверждения деталей доставки.
         </p>
       </section>
 
-      <div className="order-layout">
-        <section className="panel">
+      <div className={cx("order-layout")}>
+        <section className={cx("panel")}>
           <h3>Состав заказа</h3>
-          {order.items.map(({ product, quantity, lineTotal }) => (
-            <div className="cart-row" key={product.id}>
-              <span className="muted">
-                {product.name} x{quantity}
+          {order.items.map((item) => (
+            <div className={cx("cart-row")} key={item.id}>
+              <span className={cx("muted")}>
+                {item.productNameSnapshot} x{item.quantity}
               </span>
-              <strong>{formatMoney(lineTotal)}</strong>
+              <strong>{formatMoney(item.lineTotal)}</strong>
             </div>
           ))}
-          <div className="summary-row total-row">
+          <div className={cx("summary-row", "total-row")}>
             <span>Итого</span>
-            <strong>{formatMoney(order.total)}</strong>
+            <strong>{formatMoney(order.totalAmount)}</strong>
           </div>
         </section>
 
-        <section className="panel">
+        <section className={cx("panel")}>
           <h3>Контакты и доставка</h3>
-          <ul className="detail-list">
+          <ul className={cx("detail-list")}>
             <li>
               <span>Покупатель</span>
-              <strong>{order.form.customerName}</strong>
+              <strong>{order.customerName}</strong>
             </li>
             <li>
               <span>Телефон</span>
-              <strong>{order.form.customerPhone}</strong>
+              <strong>{order.customerPhone}</strong>
             </li>
             <li>
               <span>Email</span>
-              <strong>{order.form.customerEmail}</strong>
+              <strong>{order.customerEmail}</strong>
             </li>
             <li>
               <span>Адрес</span>
               <strong>
-                {order.form.deliveryCity}, {order.form.deliveryAddress}
+                {order.deliveryCity}, {order.deliveryAddress}
               </strong>
             </li>
             <li>
               <span>Доставка</span>
-              <strong>{order.form.deliveryMethod === "courier" ? "Курьер" : "Самовывоз"}</strong>
+              <strong>{order.deliveryMethod === "courier" ? "Курьер" : "Самовывоз"}</strong>
             </li>
           </ul>
         </section>
       </div>
 
-      <div className="actions-inline success-actions">
-        <Link className="btn" to="/catalog">
+      <div className={cx("actions-inline", "success-actions")}>
+        <Link className={cx("btn")} to="/catalog">
           Вернуться в каталог
         </Link>
-        <Link className="btn-ghost" to="/product/led-a60-7w-e27-3000k">
+        <Link className={cx("btn-ghost")} to="/product/led-a60-7w-e27-3000k">
           Посмотреть похожие товары
         </Link>
       </div>
     </>
   );
 }
-
